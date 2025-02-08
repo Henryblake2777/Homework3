@@ -1,2 +1,2 @@
-# Homework 2
-This is my homework 2 assignment for SDS 315. It contains the csv files, code, and output.
+# Homework 3
+This is my homework 3 assignment for SDS 315. It contains the csv files, code, and output.
