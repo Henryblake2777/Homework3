@@ -1,0 +1,277 @@
+---
+title: "Homework 3 - https://github.com/Henryblake2777/Homework3"
+author: "Henry Blake - hrb987"
+date: "2025-02-07"
+output:
+  pdf_document:
+    toc: True
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      eval = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      fig.align = "center")
+
+library(readr)
+library(ggplot2)
+library(tidyverse)
+library(rvest)
+library(mosaic)
+
+gasprices <- read_csv('gasprices.csv')
+sclass <- read_csv('sclass.csv')
+nbc <- read_csv('nbc_pilotsurvey.csv')
+ebay <- read_csv('ebay.csv')
+```
+
+# Problem 1 - Gas
+
+## Theory A - Competition
+
+```{r}
+comp_price <- do(10000)*diffmean(Price ~ Competitors, data = resample(gasprices))
+
+ggplot(comp_price) + geom_histogram(aes(x = diffmean), fill = '#B9375E', color = 'black') + labs(
+  title = 'Mean Gas Price of Gas Stations Near vs Not Near Competitors',
+  x = 'Near Competitor - Not Near Competitor Gas Price'
+)
+
+confint(comp_price, level = .95)
+```
+I am 95 percent confident that the mean difference of gas price between gas stations with competitors and those without, is between -5.53 cents to 0.77 cents. Because zero is included in this range, I do not have significant evidence to say that the presence of competitors lowers gas prices.
+
+## Theory B - Income
+
+```{r}
+gasprices <- gasprices |>
+  mutate(Income = if_else(Income >= mean(Income), 'High', 'Low'))
+
+comp_price <- do(10000)*diffmean(Price ~ Income, data = resample(gasprices))
+
+ggplot(comp_price) + geom_histogram(aes(x = diffmean), fill = '#FFE0E9', color = 'black') + labs(
+  title = 'Mean Gas Price In High Income Vs Low Income Zip Codes',
+  x = 'Low Income - High Income Gas Price'
+)
+
+confint(comp_price, level = .95)
+```
+
+I am 95 percent confident that the mean difference of gas price between low income and high income zip codes is between -7.72 cents to -1.43 cents. This is intriguing evidence to show that higher income zip codes charge more for gas. However, even more data will need to be found to further prove this conclusion.
+
+## Theory C - Stoplights
+
+```{r}
+comp_price <- do(10000)*diffmean(Price ~ Stoplight, data = resample(gasprices))
+
+ggplot(comp_price) + geom_histogram(aes(x = diffmean), fill = '#CEDDBB', color = 'black') + labs(
+  title = 'Mean Gas Price of Gas Stations Near vs Not Near Stoplight',
+  x = 'Near Stoplight - Not Near Stoplight Gas Price'
+)
+
+confint(comp_price, level = .95)
+```
+
+I am 95 percent confident that the mean difference of gas price between gas stations with stoplights and those without, is between -3.84 cents to 3.04 cents. Because zero is included in this range, I do not have significant evidence to say that the presence of stoplights increases gas prices.
+
+## Theory D - Highways
+
+```{r}
+comp_price <- do(10000)*diffmean(Price ~ Highway, data = resample(gasprices))
+
+ggplot(comp_price) + geom_histogram(aes(x = diffmean), fill = '#434343', color = 'black') + labs(
+  title = 'Mean Gas Price of Gas Stations Near vs Not Near Highways',
+  x = 'Near Highway - Not Near Highway Gas Price'
+)
+
+confint(comp_price, level = .95)
+```
+
+I am 95 percent confident that the mean difference of gas price between gas stations with highway access to that without is between .79 cents to 8.11 cents. This is intriguing evidence to show that gas stations with highway access charge more for gas. However, even more data will need to be found to further prove this conclusion.
+
+## Theory E - Brands
+
+```{r}
+gasprices <- gasprices |>
+  mutate(Brand = if_else(Brand == 'Shell', 'Shell', 'Not Shell'))
+
+comp_price <- do(10000)*diffmean(Price ~ Brand, data = resample(gasprices))
+
+ggplot(comp_price) + geom_histogram(aes(x = diffmean), fill = '#BE9A60', color = 'black') + labs(
+  title = 'Mean Gas Price of Shell Gas Stations Vs Non Shell Gas Stations',
+  x = 'Shell - Non Shell Gas Price'
+)
+
+confint(comp_price, level = .95)
+```
+
+I am 95 percent confident that the mean difference of gas price between Shell stations and not Shell gas stations is between -1.02 cents to 6.55 cents. Because zero is included in this range, I do not have significant evidence to say that the presence of stoplights increases gas prices.
+
+# Problem 2 - Mercedes
+
+## Part A - 63 AMG
+
+```{r}
+sclass2 <- sclass |>
+  filter(year == 2011, trim == '63 AMG')
+
+avg_mileage <- do(10000)*mean(~mileage, data = resample(sclass2))
+  
+  
+
+ggplot(avg_mileage) + geom_histogram(aes(x = mean), fill = '#B9375E', color = 'black') + labs(
+  title = 'Mean Mileage Distribution of a 2011 63 AMG',
+  x = 'Mileage'
+)
+
+confint(avg_mileage, level = .95)
+```
+
+I am 95 percent confident that the mean mileage of a 2011 63 AMG is between 26273 and 31814 miles.
+
+## Part B - 550
+
+```{r}
+sclass <- sclass |>
+  filter(year == 2014, trim == '550') |>
+  mutate(color = ifelse(color == 'Black', 'Black', 'Not Black'))
+
+prop_black <- do(10000)*prop(~color, data = resample(sclass))
+  
+
+ggplot(prop_black) + geom_histogram(aes(x = prop_Black), fill = '#FFE0E9', color = 'black') + labs(
+  title = 'Average Proportion of black 2014 550s',
+  x = 'Proportion Black'
+)
+
+confint(prop_black, level = .95)
+```
+
+I am 95 percent confident that the average proportion of 2014 550s that are black is between 41.64 percent and 45.31 percent
+
+# Problem 3 - TV
+
+## Part A - Ed or Earl?
+
+### Question
+
+Does "My Name is Earl" or "Living With Ed" make people happier?
+
+### Approach
+
+I will use bootstrapping and a difference of means confidence interval
+
+### Results
+
+```{r}
+nbc2 <- nbc |>
+  filter(Show == 'Living with Ed' | Show == 'My Name is Earl')
+
+diff_happiness <- do(10000)*diffmean(Q1_Happy ~ Show, data = resample(nbc2))
+  
+
+ggplot(diff_happiness) + geom_histogram(aes(x = diffmean), fill = '#CEDDBB', color = 'black') + labs(
+  title = 'Difference in Mean Hapiness Between Earl and Ed',
+  x = 'Earl - Ed Mean Happiness'
+)
+
+confint(diff_happiness, level = .95)
+```
+
+### Conclusion
+
+I am 95 percent confident that they difference of mean happiness rating between "My Name is Earl" and "Living with Ed" is between -.398 and .095. Since 0 is in the interval I do not have significant evidence to say one show makes audience's happier than the other, however the data leans slightly towards Living with Ed and might be worth looking more into.
+
+## Part B - Loser or LA?
+
+### Question
+
+Does "The Biggest Loser" or "My Name is Earl" make people more annoyed?
+
+### Approach
+
+I will use bootstrapping and a difference of means confidence interval
+
+### Results
+
+```{r}
+nbc3 <- nbc |>
+  filter(Show == 'The Biggest Loser' | Show == 'The Apprentice: Los Angeles')
+
+diff_annoyed <- do(10000)*diffmean(Q1_Annoyed ~ Show, data = resample(nbc3))
+  
+
+ggplot(diff_annoyed) + geom_histogram(aes(x = diffmean), fill = '#434343', color = 'black') + labs(
+  title = 'Difference in Annoyance Between Biggest Loser and Apprentice',
+  x = 'Loser - LA Mean Annoyance'
+)
+
+confint(diff_annoyed, level = .95)
+```
+
+### Conclusion
+
+I am 95 percent confident that the difference in mean annoyance between "The Biggest Loser" and "The Apprentice: Los Angeles" is between -.523 and -.023. There is intriguing evidence to show that people find "The Apprentice: Los Angeles" more annoying, but more data may be needed.
+
+## Part C - Dancing with Confusion?
+
+### Question
+
+What proportion of viewers find "Dancing with the Stars" confusing?
+
+### Approach
+
+I will use bootstrapping and a proportion confidence interval
+
+### Results
+
+```{r}
+nbc <- nbc |>
+  filter(Show == 'Dancing with the Stars') |>
+  mutate(Q2_Confusing = ifelse(Q2_Confusing >= 4, 'Confusing', 'Not Confusing'))
+
+confusing <- do(10000)*prop(~Q2_Confusing, data = resample(nbc))
+  
+
+ggplot(confusing) + geom_histogram(aes(x = prop_Confusing), fill = '#BE9A60', color = 'black') + labs(
+  title = 'Proportion of Viewers who find Dancing with the Stars Confusing',
+  x = 'Proportion Confused'
+)
+
+confint(confusing, level = .95)
+```
+### Conclusion
+
+I am 95 percent confident that the average proportion of viewers who find "Dancing with the Stars" confusing is between 3.87 and 11.60 percent. This seems to be a pretty low percentage of people and indicates that the show isn't confusing.
+
+# Problem 4 - EBay
+
+## Question
+
+Does Paid Advertisements on Google increase Ebay's revenue?
+
+## Approach
+
+I will bootstrap and construct a difference of means confidence interval
+
+## Results
+
+```{r}
+ebay <- ebay |>
+  mutate(rev_ratio = rev_after/rev_before)
+
+revenue_boot <- do(10000)*diffmean(rev_ratio ~ adwords_pause, data = resample(ebay))
+  
+ggplot(revenue_boot) + geom_histogram(aes(x = diffmean), fill = '#B9375E', color = 'black') + labs(
+  title = 'difference between revenue ratio of Advertising and Non-Adveritising',
+  x = 'treatment - control revenue ratio'
+)
+
+confint(revenue_boot, level = .95)
+```
+
+## Conclusion
+
+I am 95 percent confident that the difference between the mean revenue ratio between the treatment group and the control group is between -.0921 and -.0144. There is intriguing evidence to show that paid advertisements increase Ebay's revenue, but more data will need to be collected to be even more certain
